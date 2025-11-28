@@ -30,7 +30,7 @@
 1. **Клонирование репозитория**:
 
    ```bash
-   git clone https://github.com/<your_username>/simulator.git
+   git clone https://github.com/<your_username>/AI_vs_Judge
    ```
 
 2. **Открытие проекта в браузере**:
