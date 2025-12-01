@@ -1,125 +1,192 @@
-// Импортируем библиотеку Chart.js
-window.Chart = window.Chart || {};
+// Инициализация состояния и кэш DOM
+(function () {
+  // Селекторы
+  const intro = document.getElementById('intro');
+  const casesContainer = document.getElementById('cases');
+  const finalScreen = document.getElementById('final');
+  const resultModal = document.getElementById('resultModal');
+  const modalTitle = document.getElementById('resultTitle');
+  const modalDesc = document.getElementById('resultDesc');
+  const startBtn = document.getElementById('startBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const continueBtn = document.getElementById('continueBtn');
+  const cases = Array.from(document.querySelectorAll('.case-section'));
 
-// Массивы для хранения количества выборов
-let decisionsCount = {
-  human: [], // Решения судьи
-  ai: [], // Решения ИИ
-};
+  // Состояние
+  const state = {
+    currentIndex: 0,
+    decisionsCount: { human: [], ai: [] },
+    chartInstance: null,
+    totalCases: cases.length,
+    decisionMadeInCase: [] // для предотвращения двойного клика
+  };
 
-for (let i = 1; i <= 5; i++) {
-  decisionsCount.human.push(0); // Количество выборов судьи
-  decisionsCount.ai.push(0); // Количество выборов ИИ
-}
-
-// Генерируем уникальные ID для каждого модуля
-document.querySelectorAll(".case-section").forEach((section, index) => {
-  section.setAttribute("data-case-id", index + 1);
-});
-
-// Функция для старта симуляции
-function startSimulation() {
-  document.querySelector(".intro-page").style.display = "none"; // Скрываем приветственное сообщение
-  document.querySelector(".cases-container").style.display = "block"; // Показываем карточки
-}
-
-// Открывает модальное окно с результатом
-function openResult(decider, caseId) {
-  const resultModal = document.querySelector(".result-modal");
-  const modalTitle = resultModal.querySelector("h2");
-  const modalDescription = resultModal.querySelector("p");
-
-  if (decider === "human") {
-    modalTitle.innerText = "Решение судьи:";
-    modalDescription.innerText =
-      "Изучив все обстоятельства дела, судья принял индивидуальное решение.";
-    decisionsCount.human[caseId - 1]++;
-  } else {
-    modalTitle.innerText = "Решение ИИ:";
-    modalDescription.innerText =
-      "Быстро обработав доступные данные, ИИ предоставил строгое и однозначное решение.";
-    decisionsCount.ai[caseId - 1]++;
+  // Вспомогательные функции UI
+  function showSection(name) {
+    // name: 'intro' | 'cases' | 'final'
+    intro.classList.toggle('hidden', name !== 'intro');
+    casesContainer.classList.toggle('hidden', name !== 'cases');
+    finalScreen.classList.toggle('hidden', name !== 'final');
   }
 
-  resultModal.style.display = "flex";
-}
+  function gotoCase(index) {
+    // Снять активность со всех
+    cases.forEach(c => c.classList.remove('active-case'));
+    if (index < 0 || index >= state.totalCases) return;
+    state.currentIndex = index;
+    cases[index].classList.add('active-case');
+    // Разблокировать кнопки выбора для текущей карточки
+    enableDecisionButtons(cases[index], true);
+  }
 
-// Строим график после окончания сессии
-function drawResultsChart() {
-  const ctx = document.getElementById("resultsChart").getContext("2d");
-  new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Случай 1", "Случай 2", "Случай 3", "Случай 4", "Случай 5"],
-      datasets: [
-        {
-          label: "Решения судьи",
-          data: decisionsCount.human,
-          backgroundColor: "#007BFF",
-        },
-        {
-          label: "Решения ИИ",
-          data: decisionsCount.ai,
-          backgroundColor: "#FFADAD",
-        },
-      ],
-    },
-    options: {
-      scales: {
-        yAxes: [
+  function enableDecisionButtons(sectionEl, enable) {
+    const btns = sectionEl.querySelectorAll('button[data-decision]');
+    btns.forEach(b => {
+      b.disabled = !enable;
+    });
+  }
+
+  function toggleModal(open) {
+    resultModal.classList.toggle('hidden', !open);
+    if (!open) {
+      // Возврат фокуса на текущую карточку или контейнер
+      const section = cases[state.currentIndex];
+      if (section) {
+        const focusable = section.querySelector('button[data-decision]');
+        if (focusable) focusable.focus();
+      }
+    } else {
+      continueBtn.focus();
+    }
+  }
+
+  function initCounts() {
+    state.decisionsCount.human = Array(state.totalCases).fill(0);
+    state.decisionsCount.ai = Array(state.totalCases).fill(0);
+    state.decisionMadeInCase = Array(state.totalCases).fill(false);
+  }
+
+  // Бизнес-логика
+  function startSimulation() {
+    initCounts();
+    showSection('cases');
+    gotoCase(0);
+  }
+
+  function openResult(decider, caseIndex) {
+    if (caseIndex < 0 || caseIndex >= state.totalCases) return;
+    if (state.decisionMadeInCase[caseIndex]) return; // уже выбрали
+
+    // Учёт решения
+    if (decider === 'human') {
+      modalTitle.innerText = 'Решение судьи:';
+      modalDesc.innerText = 'Изучив все обстоятельства дела, судья принял индивидуальное решение.';
+      state.decisionsCount.human[caseIndex]++;
+    } else {
+      modalTitle.innerText = 'Решение ИИ:';
+      modalDesc.innerText = 'Быстро обработав доступные данные, ИИ предоставил строгое и однозначное решение.';
+      state.decisionsCount.ai[caseIndex]++;
+    }
+
+    // Блокируем кнопки выбора для текущей карточки
+    enableDecisionButtons(cases[caseIndex], false);
+    state.decisionMadeInCase[caseIndex] = true;
+
+    toggleModal(true);
+  }
+
+  function drawResultsChart() {
+    const canvas = document.getElementById('resultsChart');
+    if (!canvas || typeof Chart === 'undefined') return;
+    const ctx = canvas.getContext('2d');
+
+    if (state.chartInstance) {
+      state.chartInstance.destroy();
+      state.chartInstance = null;
+    }
+
+    const labels = Array.from({ length: state.totalCases }, (_, i) => `Случай ${i + 1}`);
+
+    state.chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
           {
-            ticks: {
-              beginAtZero: true,
-            },
+            label: 'Решения судьи',
+            data: state.decisionsCount.human,
+            backgroundColor: '#007BFF',
+          },
+          {
+            label: 'Решения ИИ',
+            data: state.decisionsCount.ai,
+            backgroundColor: '#FFADAD',
           },
         ],
       },
-    },
-  });
-}
-
-// Логика сброса симуляции
-function resetSimulation() {
-  document.querySelector(".final-screen").style.display = "none"; // Скрываем итоговую страницу
-  document.querySelector(".cases-container").style.display = "none"; // Скрываем карточки
-  document.querySelector(".intro-page").style.display = "block"; // Показываем начальную страницу
-  // Сбрасываем счётчики
-  decisionsCount.human.fill(0);
-  decisionsCount.ai.fill(0);
-  // Устанавливаем первую карточку активной
-  const firstSection = document.querySelector(
-    ".case-section[data-case-id='1']"
-  );
-  firstSection.classList.add("active-case"); // Активируем первую карточку
-}
-
-// Обновляем статистику после последнего случая
-function finalizeSimulation() {
-  drawResultsChart(); // Рисуем график
-  document.querySelector(".cases-container").style.display = "none"; // Скрываем карточки
-  document.querySelector(".final-screen").style.display = "block"; // Показываем итоговую страницу
-}
-
-// Закрывается модальное окно и движемся к следующей секции
-function closeModal() {
-  const resultModal = document.querySelector(".result-modal");
-  resultModal.style.display = "none";
-
-  // Найти текущую активную карточку
-  const currentSection = document.querySelector(".active-case");
-  const currentCaseId = currentSection.dataset.caseId;
-
-  // Найти следующую карточку
-  const nextCaseId = Number(currentCaseId) + 1;
-  const nextSection = document.querySelector(
-    `.case-section[data-case-id="${nextCaseId}"]`
-  );
-
-  // Если последняя карточка, заканчиваем симуляцию
-  if (!nextSection) {
-    finalizeSimulation();
-  } else {
-    currentSection.classList.remove("active-case");
-    nextSection.classList.add("active-case");
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 }
+          }
+        }
+      }
+    });
   }
-}
+
+  function finalizeSimulation() {
+    drawResultsChart();
+    showSection('final');
+  }
+
+  function resetSimulation() {
+    // Сброс экранов
+    showSection('intro');
+
+    // Сброс активной карточки
+    cases.forEach(c => c.classList.remove('active-case'));
+    gotoCase(0);
+
+    // Очистка графика и счётчиков
+    if (state.chartInstance) {
+      state.chartInstance.destroy();
+      state.chartInstance = null;
+    }
+    initCounts();
+  }
+
+  function closeModal() {
+    toggleModal(false);
+    const nextIndex = state.currentIndex + 1;
+    if (nextIndex >= state.totalCases) {
+      finalizeSimulation();
+    } else {
+      gotoCase(nextIndex);
+    }
+  }
+
+  // Навешиваем обработчики
+  startBtn.addEventListener('click', startSimulation);
+  resetBtn.addEventListener('click', resetSimulation);
+  continueBtn.addEventListener('click', closeModal);
+
+  // Делегирование выбора решения
+  casesContainer.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-decision]');
+    if (!btn) return;
+    const decision = btn.getAttribute('data-decision');
+    const caseIdAttr = btn.getAttribute('data-case');
+    const caseIndex = caseIdAttr ? Number(caseIdAttr) - 1 : state.currentIndex;
+    openResult(decision, caseIndex);
+  });
+
+  // Закрытие модалки по ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !resultModal.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
+})();

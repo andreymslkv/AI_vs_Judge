@@ -12,72 +12,73 @@
 <body>
 
   <!-- Начало главной страницы -->
-  <div class="intro-page">
+  <div class="intro-page" id="intro">
     <h1>Судья vs ИИ</h1>
     <p>Что произойдёт, если искусственный интеллект начнёт помогать судьям?</p>
-    <button onclick="startSimulation()">Начнём!</button>
+    <button id="startBtn">Начнём!</button>
   </div>
 
   <!-- Секции с карточками -->
-  <div class="cases-container" style="display:none;">
+  <div class="cases-container hidden" id="cases">
 
     <!-- Карточка 1 -->
     <section class="case-section active-case" data-case-id="1">
       <h2>Случай №1: Арест подозреваемого</h2>
       <p>Некий гражданин обвиняется в краже смартфона. Его задержали на улице, потому что внешность похожа на фоторобот,
         созданный программой на основе описания потерпевших. Есть сомнения в виновности гражданина.</p>
-      <button onclick="openResult('human', '1')">Решение судьи</button>
-      <button onclick="openResult('ai', '1')">Решение ИИ</button>
+      <button data-decision="human" data-case="1">Решение судьи</button>
+      <button data-decision="ai" data-case="1">Решение ИИ</button>
     </section>
 
     <!-- Карточка 2 -->
     <section class="case-section" data-case-id="2">
       <h2>Случай №2: Домашний арест или тюрьма</h2>
       <p>Нужно выбрать меру пресечения: домашний арест или тюремное заключение.</p>
-      <button onclick="openResult('human', '2')">Решение судьи</button>
-      <button onclick="openResult('ai', '2')">Решение ИИ</button>
+      <button data-decision="human" data-case="2">Решение судьи</button>
+      <button data-decision="ai" data-case="2">Решение ИИ</button>
     </section>
 
     <!-- Карточка 3 -->
     <section class="case-section" data-case-id="3">
       <h2>Случай №3: Размер компенсации за ДТП</h2>
       <p>Требуется рассчитать сумму возмещения ущерба после автомобильной аварии.</p>
-      <button onclick="openResult('human', '3')">Решение судьи</button>
-      <button onclick="openResult('ai', '3')">Решение ИИ</button>
+      <button data-decision="human" data-case="3">Решение судьи</button>
+      <button data-decision="ai" data-case="3">Решение ИИ</button>
     </section>
 
     <!-- Карточка 4 -->
     <section class="case-section" data-case-id="4">
       <h2>Случай №4: Авторское право</h2>
       <p>Автор обвиняется в нарушении авторских прав, но возможно культурное заимствование.</p>
-      <button onclick="openResult('human', '4')">Решение судьи</button>
-      <button onclick="openResult('ai', '4')">Решение ИИ</button>
+      <button data-decision="human" data-case="4">Решение судьи</button>
+      <button data-decision="ai" data-case="4">Решение ИИ</button>
     </section>
 
     <!-- Карточка 5 -->
     <section class="case-section" data-case-id="5">
       <h2>Случай №5: Наказание за преступление</h2>
       <p>Нужно назначить наказание с учётом всех обстоятельств дела.</p>
-      <button onclick="openResult('human', '5')">Решение судьи</button>
-      <button onclick="openResult('ai', '5')">Решение ИИ</button>
+      <button data-decision="human" data-case="5">Решение судьи</button>
+      <button data-decision="ai" data-case="5">Решение ИИ</button>
     </section>
 
   </div>
 
   <!-- Канвас для графика -->
-  <div class="final-screen" style="display:none;">
+  <div class="final-screen hidden" id="final">
     <h1>Время задуматься...</h1>
-    <canvas id="resultsChart" width="400" height="100"></canvas>
+    <canvas id="resultsChart" width="150" height="50"></canvas>
     <p>Важно сохранять баланс между технологиями и человеческими ценностями в правосудии.</p>
-    <button onclick="resetSimulation()">Вернуться к началу</button>
+    <button id="resetBtn">Вернуться к началу</button>
   </div>
 
   <!-- Модальное окно с результатами -->
-  <div class="result-modal" style="display:none;">
+  <div class="result-modal hidden" id="resultModal" role="dialog" aria-modal="true" aria-labelledby="resultTitle"
+    aria-describedby="resultDesc">
     <div class="modal-content">
-      <h2></h2>
-      <p></p>
-      <button onclick="closeModal()">Продолжить</button>
+      <h2 id="resultTitle"></h2>
+      <p id="resultDesc"></p>
+      <button id="continueBtn">Продолжить</button>
     </div>
   </div>
 
